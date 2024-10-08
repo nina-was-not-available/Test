@@ -13,6 +13,7 @@ import {
     TextField
 } from "@mui/material";
 import {getUsers, updateUser} from "../../helpers/instance.service.ts";
+import {useDebounce} from "../../helpers/useDebounce.ts";
 
 export type User = {
     id: string;
@@ -28,11 +29,12 @@ export const UserTable = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
     const [users, setUsers] = useState<User[]>([]);
+    const requestQuery = useDebounce<string>(searchTerm, 500);
 
 
     const getData = async () => {
         const data = await getUsers();
-        if (data) {
+        if (data && data.data) {
             setUsers(data.data)
         }
     }
@@ -44,9 +46,9 @@ export const UserTable = () => {
 
     const handleToggleActive = async (userId: string, active: boolean) => {
         const res = await updateUser(userId, {active});
-        if (res) {
+        if (res && res.data) {
             setUsers(users.map(user =>
-                user.id === userId ? { ...res.data } : user
+                user.id === userId ? { ...user, ...res.data } : user
             ));
         }
     };
@@ -60,8 +62,8 @@ export const UserTable = () => {
     };
 
     const filteredUsers = users.filter(user => {
-        const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.login.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = user.name.toLowerCase().includes(requestQuery.toLowerCase()) ||
+            user.login.toLowerCase().includes(requestQuery.toLowerCase());
         const matchesGroup = selectedGroup ? user.group === selectedGroup : true;
         return matchesSearch && matchesGroup;
     });
